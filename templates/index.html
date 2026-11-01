@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DevJournal - Engineering Log</title>
+    <!-- Tailwind CSS for modern developer UI -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Marked.js for parsing markdown/code snippets -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        code, pre { font-family: 'Fira Code', monospace; }
+    </style>
+</head>
+<body class="bg-zinc-950 text-zinc-100 min-h-screen flex flex-col items-center py-10 px-4">
+
+    <!-- Container -->
+    <div class="w-full max-w-3xl">
+        
+        <!-- Header -->
+        <header class="flex justify-between items-center mb-8 border-b border-zinc-800 pb-4">
+            <div>
+                <h1 class="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
+                    ⚡ DevJournal
+                </h1>
+                <p class="text-sm text-zinc-400">Backend & AI Engineering Audit Trail</p>
+            </div>
+            <!-- API Health Status Badge -->
+            <div id="health-badge" class="flex items-center gap-2 bg-zinc-900 border border-zinc-800 px-3 py-1.5 rounded-full text-xs">
+                <span class="w-2 h-2 rounded-full bg-yellow-500 animate-pulse" id="health-dot"></span>
+                <span id="health-text" class="text-zinc-400">Connecting to API...</span>
+            </div>
+        </header>
+
+        <!-- New Entry Form -->
+        <section class="bg-zinc-900 border border-zinc-800 rounded-xl p-5 mb-8 shadow-lg">
+            <h2 class="text-sm font-semibold uppercase tracking-wider text-zinc-400 mb-3">New Log Entry</h2>
+            <form id="journal-form" class="space-y-4">
+                <div>
+                    <input type="text" id="entry-title" placeholder="Entry Title (e.g., Setting up PostgreSQL foreign keys)" 
+                        class="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-4 py-2.5 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-emerald-500 transition-colors" required>
+                </div>
+                <div>
+                    <textarea id="entry-content" rows="4" placeholder="Write your notes, code snippets, or thoughts in Markdown..." 
+                        class="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-4 py-2.5 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-emerald-500 transition-colors resize-y" required></textarea>
+                </div>
+                <div class="flex justify-between items-center">
+                    <input type="text" id="entry-tags" placeholder="Tags (comma separated, e.g. fastapi, postgres)" 
+                        class="bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-1.5 text-xs text-zinc-300 placeholder-zinc-600 w-1/2 focus:outline-none focus:border-emerald-500">
+                    <button type="submit" class="bg-emerald-600 hover:bg-emerald-500 text-white font-medium px-5 py-2 rounded-lg text-sm transition-colors shadow-sm">
+                        Publish Log
+                    </button>
+                </div>
+            </form>
+        </section>
+
+        <!-- Feed Section -->
+        <main class="space-y-6">
+            <div class="flex justify-between items-center">
+                <h2 class="text-sm font-semibold uppercase tracking-wider text-zinc-400">Recent Logs (Reverse-Chronological)</h2>
+                <span id="entry-count" class="text-xs text-zinc-500">Loading entries...</span>
+            </div>
+            
+            <!-- Dynamic Feed Container -->
+            <div id="entries-container" class="space-y-6">
+                <!-- Javascript will inject entries here -->
+            </div>
+        </main>
+    </div>
+
+    <!-- JavaScript Logic -->
+    <script>
+        const API_BASE = "http://127.0.0.1:8000";
+
+        // Check Backend Health on Load
+        async function checkHealth() {
+            const dot = document.getElementById('health-dot');
+            const text = document.getElementById('health-text');
+            try {
+                const res = await fetch(`${API_BASE}/docs`);
+                if (res.ok) {
+                    dot.className = "w-2 h-2 rounded-full bg-emerald-500";
+                    text.textContent = "FastAPI Online";
+                    text.className = "text-emerald-400 font-medium";
+                } else {
+                    throw new Error();
+                }
+            } catch (e) {
+                dot.className = "w-2 h-2 rounded-full bg-red-500";
+                text.textContent = "API Offline";
+                text.className = "text-red-400 font-medium";
+            }
+        }
+
+        // Fetch and Render Entries
+        async function loadEntries() {
+            const container = document.getElementById('entries-container');
+            const countLabel = document.getElementById('entry-count');
+            
+            try {
+                const response = await fetch(`${API_BASE}/entries`);
+                if (!response.ok) throw new Error("Failed to fetch entries");
+                
+                const entries = await response.json();
+                countLabel.textContent = `${entries.length} total entries`;
+                
+                if (entries.length === 0) {
+                    container.innerHTML = `<div class="text-center py-12 text-zinc-600 border border-dashed border-zinc-800 rounded-xl">No journal entries yet. Publish your first log above!</div>`;
+                    return;
+                }
+
+                container.innerHTML = entries.map(entry => `
+                    <article class="bg-zinc-900 border border-zinc-800 rounded-xl p-5 shadow-md space-y-4">
+                        <div class="flex justify-between items-start">
+                            <h3 class="text-lg font-semibold text-white">${escapeHtml(entry.title)}</h3>
+                            <span class="text-xs text-zinc-500 font-mono">${new Date(entry.created_at).toLocaleString()}</span>
+                        </div>
+                        
+                        <div class="text-sm text-zinc-300 prose prose-invert max-w-none">
+                            ${marked.parse(entry.content)}
+                        </div>
+
+                        ${entry.tags ? `
+                            <div class="flex flex-wrap gap-1.5 pt-2">
+                                ${entry.tags.split(',').map(tag => `<span class="bg-zinc-800 text-zinc-400 text-xs px-2 py-0.5 rounded-md font-mono">#${tag.trim()}</span>`).join('')}
+                            </div>
+                        ` : ''}
+
+                        <!-- Comments Section (Foreign Key Relationship) -->
+                        <div class="border-t border-zinc-800 pt-3 mt-4 space-y-3">
+                            <h4 class="text-xs font-semibold uppercase tracking-wider text-zinc-500">Debugging Notes / Comments</h4>
+                            
+                            <div class="space-y-2" id="comments-${entry.id}">
+                                ${entry.comments && entry.comments.length > 0 
+                                    ? entry.comments.map(c => `<div class="bg-zinc-950 p-2.5 rounded-lg border border-zinc-800/60 text-xs text-zinc-300"><p>${escapeHtml(c)}</p></div>`).join('')
+                                    : `<p class="text-xs text-zinc-600 italic">No comments attached yet.</p>`
+                                }
+                            </div>
+
+                            <!-- Add Comment Form -->
+                            <form onsubmit="postComment(event, ${entry.id})" class="flex gap-2 pt-1">
+                                <input type="text" placeholder="Add a follow-up or bug fix note..." id="comment-input-${entry.id}"
+                                    class="flex-1 bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-1.5 text-xs text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-emerald-500" required>
+                                <button type="submit" class="bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs px-3 py-1.5 rounded-lg transition-colors font-medium">
+                                    Add
+                                </button>
+                            </form>
+                        </div>
+                    </article>
+                `).join('');
+
+            } catch (err) {
+                container.innerHTML = `<div class="text-center py-10 text-red-400 border border-red-900/50 bg-red-950/20 rounded-xl">Could not connect to FastAPI server. Make sure your backend is running on port 8000.</div>`;
+                countLabel.textContent = "Error loading";
+            }
+        }
+
+        // Handle New Entry Submission
+        document.getElementById('journal-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const title = document.getElementById('entry-title').value;
+            const content = document.getElementById('entry-content').value;
+            const tags = document.getElementById('entry-tags').value;
+
+            try {
+                const res = await fetch(`${API_BASE}/api/entries`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title, content, tags })
+                });
+
+                if (res.ok) {
+                    document.getElementById('journal-form').reset();
+                    loadEntries();
+                } else {
+                    alert("Failed to create entry.");
+                }
+            } catch (err) {
+                alert("Network error while submitting entry.");
+            }
+        });
+
+        // Handle Comment Submission (Foreign Key Endpoint)
+        async function postComment(event, entryId) {
+            event.preventDefault();
+            const inputField = document.getElementById(`comment-input-${entryId}`);
+            const content = inputField.value;
+
+            try {
+                const res = await fetch(`${API_BASE}/entries/${entryId}/comments`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ content })
+                });
+
+                if (res.ok) {
+                    inputField.value = '';
+                    loadEntries(); // Refresh feed to show new comment
+                } else {
+                    alert("Failed to post comment.");
+                }
+            } catch (err) {
+                alert("Network error while posting comment.");
+            }
+        }
+
+        // Simple XSS sanitizer helper
+        function escapeHtml(str) {
+            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+        }
+
+        // Initialize on page load
+        checkHealth();
+        loadEntries();
+    </script>
+</body>
+</html>
