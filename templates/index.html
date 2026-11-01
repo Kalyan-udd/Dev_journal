@@ -72,14 +72,14 @@
 
     <!-- JavaScript Logic -->
     <script>
-        const response = await fetch(`${window.location.protocol}//${window.location.hostname}:8000/entries`);
+        const API_BASE = `${window.location.protocol}//${window.location.hostname}:8000`;
 
         // Check Backend Health on Load
         async function checkHealth() {
             const dot = document.getElementById('health-dot');
             const text = document.getElementById('health-text');
             try {
-                const res = await fetch(`/docs`);
+                const res = await fetch(`${API_BASE}/docs`);
                 if (res.ok) {
                     dot.className = "w-2 h-2 rounded-full bg-emerald-500";
                     text.textContent = "FastAPI Online";
@@ -100,7 +100,7 @@
             const countLabel = document.getElementById('entry-count');
             
             try {
-                const response = await fetch(`/entries`);
+                const response = await fetch(`${API_BASE}/entries`);
                 if (!response.ok) throw new Error("Failed to fetch entries");
                 
                 const entries = await response.json();
@@ -165,7 +165,7 @@
             const tags = document.getElementById('entry-tags').value;
 
             try {
-                const res = await fetch(`/api/entries`, {
+                const res = await fetch(`${API_BASE}/api/entries`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ title, content, tags })
@@ -189,7 +189,7 @@
             const content = inputField.value;
 
             try {
-                const res = await fetch(`/entries/${entryId}/comments`, {
+                const res = await fetch(`${API_BASE}/entries/${entryId}/comments`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ content })
