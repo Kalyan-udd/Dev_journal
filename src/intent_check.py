@@ -55,13 +55,3 @@ class IntentCheck():
             return "GENERAL_CHAT"
 
         return best_intent
-
-
-if __name__ == "__main__":
-    router = IntentCheck()
-    
-    test_msg = "Generate some text for me to create a Journal on the Ayurveda"
-    result = router.compare(test_msg)
-    
-    print(f"\nUser Message: '{test_msg}'")
-    print(f"Detected Intent: **{result}**")
