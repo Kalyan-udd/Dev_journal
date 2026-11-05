@@ -5,7 +5,7 @@ from datetime import datetime
 from fastapi.requests import Request
 from schemas import Journal, Comments, TextGenerationModel
 from databases import insert_values, show_complete_data, update_comment, prompt_query
-from src.intent_check import IntentCheck
+from intent_check import IntentCheck
 from prompt_generation import PromptGeneration
 
 app = FastAPI()
