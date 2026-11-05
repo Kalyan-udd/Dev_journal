@@ -73,3 +73,17 @@ def update_comment(database_path:str, entryId:int, new_comment:str):
     conn.commit()
     conn.close()
     return True
+
+def prompt_query(database_path:str, journal_name: str):
+    conn = sqlite3.connect(database=database_path)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT * FROM journal WHERE title = ?", (journal_name,))
+        row = cursor.fetchone()
+        if not row:
+            conn.close()
+            return None
+        return dict(row)
+    except:
+        return None

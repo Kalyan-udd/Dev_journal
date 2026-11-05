@@ -10,3 +10,8 @@ class Journal(BaseModel):
 #TODO
 class Comments(BaseModel):
     content: str
+
+#TODO
+class TextGenerationModel(BaseModel):
+    journal_name : str
+    user_prompt: str

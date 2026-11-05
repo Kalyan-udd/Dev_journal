@@ -3,9 +3,10 @@ from fastapi.responses import FileResponse
 import uvicorn
 from datetime import datetime
 from fastapi.requests import Request
-from schemas import Journal, Comments
-from databases import insert_values, show_complete_data, update_comment
-
+from schemas import Journal, Comments, TextGenerationModel
+from databases import insert_values, show_complete_data, update_comment, prompt_query
+from intent_check import IntentCheck
+from prompt_generation import PromptGeneration
 
 app = FastAPI()
 
@@ -24,7 +25,7 @@ def entries(request:Request):
 @app.get("/api/health")
 def health_check():
     return {
-        "status":"ok",
+        "status":"ok", 
     }
 
 @app.post("/api/entries")
@@ -44,6 +45,29 @@ def comments(data:Comments, entryId:int):
             return {"status": "success", "result": "saved the comment successfully"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"exception occured - {e}.")
+
+@app.post("/api/prompt")
+def prompt(data: TextGenerationModel):
+    journal_name = data.journal_name
+    user_prompt = data.user_prompt
+    try:
+        print(journal_name)
+        row = prompt_query(database_path="Database.db", journal_name=journal_name)
+        intent_check = IntentCheck()
+        intent = intent_check.compare(user_prompt)
+        prompt_gen = PromptGeneration()
+        message_payload = prompt_gen.build_messages(intent=intent, user_query=user_prompt, retrieved_logs=row, journal_title=journal_name)
+        print(message_payload)
+        generated_text = prompt_gen.text_generation(message_payload=message_payload)
+        return {
+            "intent": intent,
+            "journal_targeted": journal_name,
+            "generated_response": generated_text,
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Exception - {e}") 
+
+
 
 if __name__ == "__main__":
     uvicorn.run(app="main:app", host="0.0.0.0", port=8000, reload=True)
