@@ -51,13 +51,11 @@ def prompt(data: TextGenerationModel):
     journal_name = data.journal_name
     user_prompt = data.user_prompt
     try:
-        print(journal_name)
         row = prompt_query(database_path="Database.db", journal_name=journal_name)
         intent_check = IntentCheck()
         intent = intent_check.compare(user_prompt)
         prompt_gen = PromptGeneration()
         message_payload = prompt_gen.build_messages(intent=intent, user_query=user_prompt, retrieved_logs=row, journal_title=journal_name)
-        print(message_payload)
         generated_text = prompt_gen.text_generation(message_payload=message_payload)
         return {
             "intent": intent,
@@ -66,8 +64,6 @@ def prompt(data: TextGenerationModel):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Exception - {e}") 
-
-
 
 if __name__ == "__main__":
     uvicorn.run(app="main:app", host="0.0.0.0", port=8000, reload=True)

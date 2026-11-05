@@ -3,11 +3,11 @@ from dotenv import load_dotenv
 from pathlib import Path
 from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
+import os
 
 ROOT = Path(__file__).resolve().parent.parent
 
 load_dotenv(f"{ROOT}/.env")
-
 
 class IntentCheck():
     def __init__(self) -> None:

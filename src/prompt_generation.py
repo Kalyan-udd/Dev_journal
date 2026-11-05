@@ -2,6 +2,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 from groq import Groq
 from typing import Dict, Optional
+import os
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -10,14 +11,14 @@ load_dotenv(f"{ROOT}/.env")
 
 class PromptGeneration():
     def __init__(self) -> None:
-        self.__client = Groq()
+        self.__client = Groq(api_key=os.getenv("GROQ_API_KEY"))
         self.__system_prompt = {
             "GENERAL_CHAT": (
                 "You are DevJournal AI, an elite AI engineering and software development collaborator. "
                 "Your primary purpose is to generate high-quality, precise, and articulate code, technical text, "
                 "architecture explanations, and drafts requested by the user. "
                 "Be direct, highly technical, and concise. Avoid unnecessary conversational filler, meta-talk, "
-                "or generic AI introductory remarks; dive straight into the requested solution or content.",
+                "or generic AI introductory remarks; dive straight into the requested solution or content."
                 "Try to give the response under 1024 tokens"
             ),
             "JOURNAL_QUERIES": (
