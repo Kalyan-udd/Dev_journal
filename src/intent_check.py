@@ -9,6 +9,8 @@ ROOT = Path(__file__).resolve().parent.parent
 
 load_dotenv(f"{ROOT}/.env")
 
+os.getenv("HF_TOKEN")
+
 class IntentCheck():
     def __init__(self) -> None:
         self.__model = SentenceTransformer('all-MiniLM-L6-v2')
