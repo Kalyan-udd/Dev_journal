@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 #TODO
 class Journal(BaseModel):
@@ -15,3 +15,7 @@ class Comments(BaseModel):
 class TextGenerationModel(BaseModel):
     journal_name : str
     user_prompt: str
+
+#TODO
+class ContentUpdate(BaseModel):
+    content: str

@@ -9,7 +9,7 @@ ROOT = Path(__file__).resolve().parent.parent
 
 load_dotenv(f"{ROOT}/.env")
 
-os.getenv("HF_TOKEN")
+HF_TOKEN = os.getenv("HF_TOKEN")
 
 class IntentCheck():
     def __init__(self) -> None:

@@ -111,7 +111,7 @@
             </div>
         </main>
     </div>
-
+    
 
     <!-- JavaScript Logic -->
     <script>
@@ -155,44 +155,79 @@
                 }
 
                 container.innerHTML = entries.map(entry => `
-                    <article class="bg-zinc-900 border border-zinc-800 rounded-xl p-5 shadow-md space-y-4">
-                        <div class="flex justify-between items-start">
-                            <h3 class="text-lg font-semibold text-white">${escapeHtml(entry.title)}</h3>
+                <article class="bg-zinc-900 border border-zinc-800 rounded-xl p-5 shadow-md space-y-4" id="entry-card-${entry.id}">
+                    <div class="flex justify-between items-start">
+                        <!-- Normal Title View -->
+                        <h3 class="text-lg font-semibold text-white" id="title-view-${entry.id}">${escapeHtml(entry.title)}</h3>
+                        <div class="flex items-center gap-3">
                             <span class="text-xs text-zinc-500 font-mono">${new Date(entry.created_at).toLocaleString()}</span>
+                            <button onclick="toggleEdit(${entry.id})" id="edit-btn-${entry.id}" class="text-xs bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-2.5 py-1 rounded-md transition-colors">
+                                Edit
+                            </button>
+                            <button onclick="deleteEntry(${entry.id})" class="text-xs bg-red-950/40 hover:bg-red-900/50 text-red-400 border border-red-900/30 px-2.5 py-1 rounded-md transition-colors">
+                                Delete
+                            </button>
                         </div>
+                    </div>
+                    
+                    <!-- INLINE EDIT CONTAINER (Replaces text areas in-place when toggled) -->
+                    <div id="edit-form-${entry.id}" class="hidden space-y-3">
+                        <input type="text" id="edit-title-${entry.id}" value="${escapeHtml(entry.title)}" 
+                            class="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white font-semibold focus:outline-none focus:border-emerald-500" placeholder="Entry Title">
+                        <textarea id="edit-content-${entry.id}" rows="4" 
+                            class="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-200 focus:outline-none focus:border-emerald-500 font-mono" placeholder="Markdown Content">${escapeHtml(entry.content)}</textarea>
+                        <input type="text" id="edit-tags-${entry.id}" value="${escapeHtml(entry.tags || '')}" 
+                            class="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2 text-xs text-zinc-300 font-mono focus:outline-none focus:border-emerald-500" placeholder="Tags (comma separated)">
                         
-                        <div class="text-sm text-zinc-300 prose prose-invert max-w-none">
-                            ${marked.parse(entry.content)}
+                        <div class="flex justify-end gap-2 pt-1">
+                            <button type="button" onclick="toggleEdit(${entry.id})" class="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs px-3 py-1.5 rounded-lg transition-colors">Cancel</button>
+                            <button type="button" onclick="saveEdit(${entry.id})" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs px-3 py-1.5 rounded-lg font-medium transition-colors">Save Changes</button>
                         </div>
+                    </div>
 
+                    <!-- Normal Content View -->
+                    <div class="text-sm text-zinc-300 prose prose-invert max-w-none" id="content-view-${entry.id}">
+                        ${marked.parse(entry.content)}
+                    </div>
+
+                    <!-- Normal Tags View -->
+                    <div id="tags-view-${entry.id}">
                         ${entry.tags ? `
                             <div class="flex flex-wrap gap-1.5 pt-2">
                                 ${entry.tags.split(',').map(tag => `<span class="bg-zinc-800 text-zinc-400 text-xs px-2 py-0.5 rounded-md font-mono">#${tag.trim()}</span>`).join('')}
                             </div>
                         ` : ''}
+                    </div>
 
-                        <!-- Comments Section (Foreign Key Relationship) -->
-                        <div class="border-t border-zinc-800 pt-3 mt-4 space-y-3">
-                            <h4 class="text-xs font-semibold uppercase tracking-wider text-zinc-500">Debugging Notes / Comments</h4>
-                            
-                            <div class="space-y-2" id="comments-${entry.id}">
-                                ${entry.comments && entry.comments.length > 0 
-                                    ? entry.comments.map(c => `<div class="bg-zinc-950 p-2.5 rounded-lg border border-zinc-800/60 text-xs text-zinc-300"><p>${escapeHtml(c)}</p></div>`).join('')
-                                    : `<p class="text-xs text-zinc-600 italic">No comments attached yet.</p>`
-                                }
-                            </div>
-
-                            <!-- Add Comment Form -->
-                            <form onsubmit="postComment(event, ${entry.id})" class="flex gap-2 pt-1">
-                                <input type="text" placeholder="Add a follow-up or bug fix note..." id="comment-input-${entry.id}"
-                                    class="flex-1 bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-1.5 text-xs text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-emerald-500" required>
-                                <button type="submit" class="bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs px-3 py-1.5 rounded-lg transition-colors font-medium">
-                                    Add
-                                </button>
-                            </form>
+                    <!-- Comments Section -->
+                    <div class="border-t border-zinc-800 pt-3 mt-4 space-y-3">
+                        <h4 class="text-xs font-semibold uppercase tracking-wider text-zinc-500">Debugging Notes / Comments</h4>
+                        
+                        <!-- Inside the comments-entry.id container -->
+                        <div class="space-y-2" id="comments-${entry.id}">
+                            ${entry.comments && entry.comments.length > 0 
+                                ? entry.comments.map((c, index) => `
+                                    <div class="bg-zinc-950 p-2.5 rounded-lg border border-zinc-800/60 text-xs text-zinc-300 flex justify-between items-start gap-2">
+                                        <p class="flex-1">${escapeHtml(typeof c === 'string' ? c : c.content)}</p>
+                                        <button onclick="deleteComment(${entry.id}, ${index})" class="text-zinc-600 hover:text-red-400 transition-colors" title="Delete comment">
+                                            ✕
+                                        </button>
+                                    </div>
+                                `).join('')
+                                : `<p class="text-xs text-zinc-600 italic">No comments attached yet.</p>`
+                            }
                         </div>
-                    </article>
-                `).join('');
+
+                        <form onsubmit="postComment(event, ${entry.id})" class="flex gap-2 pt-1">
+                            <input type="text" placeholder="Add a follow-up or bug fix note..." id="comment-input-${entry.id}"
+                                class="flex-1 bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-1.5 text-xs text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-emerald-500" required>
+                            <button type="submit" class="bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs px-3 py-1.5 rounded-lg transition-colors font-medium">
+                                Add
+                            </button>
+                        </form>
+                    </div>
+                </article>
+            `).join('');
 
             } catch (err) {
                 container.innerHTML = `<div class="text-center py-10 text-red-400 border border-red-900/50 bg-red-950/20 rounded-xl">Could not connect to FastAPI server. Make sure your backend is running on port 8000.</div>`;
@@ -292,6 +327,112 @@
                 }
             } catch (err) {
                 alert("Network error while posting comment.");
+            }
+        }
+        // Toggle the inline edit form visibility
+        function toggleEdit(entryId) {
+            const editForm = document.getElementById(`edit-form-${entryId}`);
+            editForm.classList.toggle('hidden');
+        }
+
+        // Send the update to your FastAPI PATCH endpoints
+        // Toggle between reading view and in-place editing view
+        function toggleEdit(entryId) {
+            const editForm = document.getElementById(`edit-form-${entryId}`);
+            const titleView = document.getElementById(`title-view-${entryId}`);
+            const contentView = document.getElementById(`content-view-${entryId}`);
+            const tagsView = document.getElementById(`tags-view-${entryId}`);
+            const editBtn = document.getElementById(`edit-btn-${entryId}`);
+
+            const isHidden = editForm.classList.contains('hidden');
+
+            if (isHidden) {
+                editForm.classList.remove('hidden');
+                titleView.classList.add('hidden');
+                contentView.classList.add('hidden');
+                tagsView.classList.add('hidden');
+                editBtn.textContent = "Close";
+                editBtn.className = "text-xs bg-red-950/50 hover:bg-red-900/50 text-red-300 border border-red-900/50 px-2.5 py-1 rounded-md transition-colors";
+            } else {
+                editForm.classList.add('hidden');
+                titleView.classList.remove('hidden');
+                contentView.classList.remove('hidden');
+                tagsView.classList.remove('hidden');
+                editBtn.textContent = "Edit";
+                editBtn.className = "text-xs bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-2.5 py-1 rounded-md transition-colors";
+            }
+        }
+
+        // Send updates for title, content, and tags to FastAPI backend
+        async function saveEdit(entryId) {
+            const newTitle = document.getElementById(`edit-title-${entryId}`).value.trim();
+            const newContent = document.getElementById(`edit-content-${entryId}`).value.trim();
+            const newTags = document.getElementById(`edit-tags-${entryId}`).value.trim();
+
+            try {
+                const [titleRes, contentRes, tagsRes] = await Promise.all([
+                    fetch(`${API_BASE}/api/${entryId}/update/title`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ content: newTitle })
+                    }),
+                    fetch(`${API_BASE}/api/${entryId}/update/content`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ content: newContent })
+                    }),
+                    fetch(`${API_BASE}/api/${entryId}/update/tags`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ content: newTags })
+                    })
+                ]);
+
+                if (titleRes.ok && contentRes.ok && tagsRes.ok) {
+                    loadEntries(); // Refresh feed with latest database state
+                } else {
+                    alert("Failed to update entry.");
+                }
+            } catch (err) {
+                alert("Network error while updating entry.");
+            }
+        }
+        // Delete a journal entry
+        async function deleteEntry(entryId) {
+            if (!confirm("Are you sure you want to delete this log entry?")) return;
+
+            try {
+                const res = await fetch(`${API_BASE}/api/entries/${entryId}`, {
+                    method: 'DELETE'
+                });
+
+                if (res.ok) {
+                    loadEntries(); // Refresh feed
+                } else {
+                    alert("Failed to delete entry.");
+                }
+            } catch (err) {
+                alert("Network error while deleting entry.");
+            }
+        }
+
+        // Delete a specific comment
+        async function deleteComment(entryId, commentIndex) {
+            if (!confirm("Are you sure you want to delete this comment?")) return;
+
+            try {
+                // Adjust this endpoint depending on how your backend handles comment deletion
+                const res = await fetch(`${API_BASE}/entries/${entryId}/comments/${commentIndex}`, {
+                    method: 'DELETE'
+                });
+
+                if (res.ok) {
+                    loadEntries(); // Refresh feed
+                } else {
+                    alert("Failed to delete comment.");
+                }
+            } catch (err) {
+                alert("Network error while deleting comment.");
             }
         }
 

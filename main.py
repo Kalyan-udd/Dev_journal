@@ -3,8 +3,8 @@ from fastapi.responses import FileResponse
 import uvicorn
 from datetime import datetime
 from fastapi.requests import Request
-from schemas import Journal, Comments, TextGenerationModel
-from databases import insert_values, show_complete_data, update_comment, prompt_query
+from schemas import Journal, Comments, TextGenerationModel, ContentUpdate
+from databases import insert_values, show_complete_data, update_comment, prompt_query, update_content, delete_journal_post, delete_comment
 from intent_check import IntentCheck
 from prompt_generation import PromptGeneration
 
@@ -25,14 +25,14 @@ def entries(request:Request):
 @app.get("/api/health")
 def health_check():
     return {
-        "status":"ok", 
+        "status":"200, ok", 
     }
 
 @app.post("/api/entries")
 def receiving_data(data: Journal):
     try:
         current_time = datetime.now().isoformat()
-        result = insert_values("Database.db", data=dict(data), time=current_time)
+        result = insert_values(database_path="Database.db", data=dict(data), time=current_time)
         return {"status":"Success", "result":result, "Created_at": current_time}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"{e}")
@@ -64,6 +64,48 @@ def prompt(data: TextGenerationModel):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Exception - {e}") 
+
+@app.post("/api/{entryId}/update/title")
+def update_title(entryId, data:ContentUpdate):
+    content = data.content
+    try:
+        database_response = update_content(content_type='title', content=content, entry_Id=entryId)
+        return f"successfully updated the response - {database_response}"
+    except Exception as e:
+        raise HTTPException(status_code= 500, detail=f"Exception - {e}")
+
+@app.post("/api/{entryId}/update/content")
+def update__content(entryId, data:ContentUpdate):
+    content = data.content
+    try:
+        database_response = update_content(content_type="content", content=content, entry_Id=entryId)
+        return f"successfully updated the response - {database_response}"
+    except Exception as e:
+        raise HTTPException(status_code= 500, detail=f"Exception - {e}")
+
+@app.post("/api/{entryId}/update/tags")
+def update_tags(entryId, data:ContentUpdate):
+    content = data.content
+    try:
+        database_response = update_content(content_type="tags", content=content, entry_Id=entryId)
+        return f"successfully updated the response - {database_response}"
+    except Exception as e:
+        raise HTTPException(status_code= 500, detail=f"Exception - {e}")
+
+@app.delete("/api/entries/{entryId}")
+def delete_post(entryId):
+    response = delete_journal_post(entryId=entryId)
+    return response
+
+@app.delete("/entries/{entryId}/comments/{commentIndex}")
+def delete_comments(entryId:int, commentIndex:int):
+    response = delete_comment(entryId=entryId, comment_index= commentIndex)
+    if response:
+        return "Comment Deleted Successful"
+    else:
+        raise HTTPException(status_code=422, detail="Incorrect entryId or comment_index")
+
+
 
 if __name__ == "__main__":
     uvicorn.run(app="main:app", host="0.0.0.0", port=8000, reload=True)

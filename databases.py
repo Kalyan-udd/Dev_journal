@@ -1,8 +1,7 @@
 import sqlite3
 import json
-from datetime import datetime
 
-def insert_values(database_path: str, data:dict, time):
+def insert_values(data : dict, time, database_path: str = "Database.db"):
     conn = sqlite3.connect(database_path)
     cursor = conn.cursor()
     cursor.execute("""
@@ -35,7 +34,7 @@ def insert_values(database_path: str, data:dict, time):
     conn.close()
     return "Inserted values successfully..."
 
-def show_complete_data(database_path:str):
+def show_complete_data(database_path:str = "Database.db"):
     conn = sqlite3.connect(database=database_path)
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
@@ -53,7 +52,7 @@ def show_complete_data(database_path:str):
 
     return journal_list
 
-def update_comment(database_path:str, entryId:int, new_comment:str):
+def update_comment(entryId:int, new_comment:str, database_path:str = "Database.db"):
     conn = sqlite3.connect(database=database_path)
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
@@ -74,7 +73,7 @@ def update_comment(database_path:str, entryId:int, new_comment:str):
     conn.close()
     return True
 
-def prompt_query(database_path:str, journal_name: str):
+def prompt_query(journal_name: str, database_path:str = "Database.db"):
     conn = sqlite3.connect(database=database_path)
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
@@ -87,3 +86,47 @@ def prompt_query(database_path:str, journal_name: str):
         return dict(row)
     except:
         return None
+
+
+def update_content(content_type: str, entry_Id : int, content:str, database_path:str = "Database.db"):
+    conn = sqlite3.connect(database=database_path)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    cursor.execute(f"UPDATE journal SET {content_type} = ? WHERE id = ?;",(content, entry_Id))
+    conn.commit()
+    cursor.execute("SELECT * FROM journal WHERE id = ?;", (entry_Id,))
+    row = cursor.fetchone()
+    conn.close()
+    return dict(row)
+
+def delete_journal_post(entryId: int, database_path: str = "Database.db"):
+    conn = sqlite3.connect(database=database_path)
+    cursor = conn.cursor()
+    try:
+        cursor.execute("DELETE FROM journal WHERE id = ?;", (entryId,))
+        conn.commit()
+        conn.close()
+        return f"Successfully deleted the post with id {entryId}."
+    except Exception as e:
+        conn.close()
+        return f"Error occured - {e}"
+
+
+def delete_comment(entryId: int, comment_index: int, database_path: str = "Database.db"):
+    conn = sqlite3.connect(database=database_path)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    cursor.execute("SELECT comments FROM journal WHERE id = ?;", (entryId,))
+    row = cursor.fetchone()
+    if not row:
+        conn.close()
+        return False
+    current_comment = json.loads(row['comments']) if row['comments'] else []
+    current_comment.pop(comment_index)
+    update_comment = json.dumps(current_comment)
+
+    cursor.execute("UPDATE journal SET comments = ? WHERE id = ?;", (update_comment, entryId,))
+    conn.commit()
+    conn.close()
+    return True
+      
